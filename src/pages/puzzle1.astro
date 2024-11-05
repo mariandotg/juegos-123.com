@@ -1,0 +1,9 @@
+---
+import Puzzle from "../components/Puzzle";
+import Layout from "../layouts/Layout.astro";
+
+---
+<Layout title="puzzle 1">
+    <!-- <img src="puzzle1.jpg" class="w-screen"/> -->
+    <Puzzle gridSize={6} client:only />
+</Layout>
