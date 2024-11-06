@@ -11,7 +11,9 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize }) => {
     });
     const [tiles, setTiles] = React.useState<number[]>(Array.from({ length: gridSize * gridSize }, (_, index) => index));
     const [tileToSwap, setTileToSwap] = React.useState<number | null>(null);
+console.log(window.innerHeight
 
+)
     // Detect orientation and update dimensions
     React.useEffect(() => {
         const handleResize = () => {
@@ -25,10 +27,14 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize }) => {
         return () => window.removeEventListener("resize", handleResize);
     }, []);
 
-    // Determine puzzle size based on orientation
+    // Determine puzzle size based on 16:9 aspect ratio
     const isLandscape = dimensions.width > dimensions.height;
-    const puzzleSize = isLandscape ? dimensions.height - 64 : dimensions.width - 64;
-    const tileSize = puzzleSize / gridSize;
+    const puzzleWidth = isLandscape ? dimensions.width - 64 : (dimensions.height - 64) * (16 / 9);
+    const puzzleHeight = dimensions.height - 32;
+
+    // Calculate tile dimensions based on 16:9 puzzle area
+    const tileWidth = puzzleWidth / gridSize;
+    const tileHeight = puzzleHeight / gridSize;
 
     const changeOrder = (tileToSwapIndex: number, targetIndex: number) => {
         setTiles((prevTiles) => {
@@ -69,12 +75,12 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize }) => {
             className="grid gap-1"
             style={{
                 gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
-                width: `${puzzleSize}px`,
-                height: `${puzzleSize}px`,
+                width: `${puzzleWidth}px`,
+                height: `${puzzleHeight}px`,
             }}
         >
             {tiles.map((tile, index) => (
-                <div key={index} className="relative" style={{ width: `${tileSize}px`, height: `${tileSize}px` }}>
+                <div key={index} className="relative" style={{ width: `${tileWidth}px`, height: `${tileHeight}px` }}>
                     {tileToSwap === index && (
                         <div
                             className={`border-2 absolute inset-0 z-10 ${tileToSwap === index ? 'border-yellow-600' : 'border-transparent'}`}
@@ -84,11 +90,11 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize }) => {
                     <div
                         className={`flex items-center justify-center bg-green-700 text-white font-bold text-xl cursor-pointer z-0`}
                         style={{
-                            width: `${tileSize}px`,
-                            height: `${tileSize}px`,
+                            width: `${tileWidth}px`,
+                            height: `${tileHeight}px`,
                             backgroundImage: "url('/puzzle1.webp')",
-                            backgroundSize: `${puzzleSize}px ${puzzleSize}px`,
-                            backgroundPosition: `${-(tile % gridSize) * tileSize}px ${-Math.floor(tile / gridSize) * tileSize}px`
+                            backgroundSize: `${puzzleWidth}px ${puzzleHeight}px`,
+                            backgroundPosition: `${-(tile % gridSize) * tileWidth}px ${-Math.floor(tile / gridSize) * tileHeight}px`
                         }}
                         onClick={() => moveTile(index)}
                     >
