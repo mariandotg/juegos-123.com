@@ -5,18 +5,30 @@ interface PuzzleProps {
 }
 
 const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize }) => {
+    const [dimensions, setDimensions] = React.useState({
+        width: window.innerWidth,
+        height: window.innerHeight,
+    });
     const [tiles, setTiles] = React.useState<number[]>(Array.from({ length: gridSize * gridSize }, (_, index) => index));
     const [tileToSwap, setTileToSwap] = React.useState<number | null>(null);
-    const [width, setWidth] = React.useState(window.innerWidth);
 
+    // Detect orientation and update dimensions
     React.useEffect(() => {
-      const handleResize = () => setWidth(window.innerWidth);
-      window.addEventListener("resize", handleResize);
-      return () => window.removeEventListener("resize", handleResize);
+        const handleResize = () => {
+            setDimensions({
+                width: window.innerWidth,
+                height: window.innerHeight,
+            });
+        };
+
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
     }, []);
 
-    const puzzleSize = width - 64; // Width of the puzzle container (screen width minus 64px)
-    const tileSize = puzzleSize / gridSize; // Size of each tile
+    // Determine puzzle size based on orientation
+    const isLandscape = dimensions.width > dimensions.height;
+    const puzzleSize = isLandscape ? dimensions.height - 64 : dimensions.width - 64;
+    const tileSize = puzzleSize / gridSize;
 
     const changeOrder = (tileToSwapIndex: number, targetIndex: number) => {
         setTiles((prevTiles) => {
@@ -24,14 +36,11 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize }) => {
             const temp = array[tileToSwapIndex];
             array[tileToSwapIndex] = array[targetIndex];
             array[targetIndex] = temp;
-            console.log("Antes:", prevTiles);
-            console.log("Después:", array);
             return array;
         });
     };
-    
+
     const moveTile = (index: number) => {
-        console.log("Index seleccionado:", index);
         if (tileToSwap === index) {
             setTileToSwap(null);
             return;
@@ -42,18 +51,16 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize }) => {
         } else {
             const tileToSwapRow = Math.floor(tileToSwap / gridSize);
             const indexRow = Math.floor(index / gridSize);
-    
+
             if (tileToSwapRow === indexRow) {
                 if (tileToSwap - 1 === index || tileToSwap + 1 === index) {
                     changeOrder(tileToSwap, index);
                 }
             } else if (Math.abs(tileToSwap - index) === gridSize) {
                 changeOrder(tileToSwap, index);
-            } else {
-                console.log("Movimiento no permitido");
             }
-    
-            setTileToSwap(null); 
+
+            setTileToSwap(null);
         }
     };
 
