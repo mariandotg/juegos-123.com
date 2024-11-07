@@ -29,8 +29,8 @@ console.log(window.innerHeight
 
     // Determine puzzle size based on 16:9 aspect ratio
     const isLandscape = dimensions.width > dimensions.height;
-    const puzzleWidth = isLandscape ? dimensions.width - 64 : (dimensions.height - 64) * (16 / 9);
-    const puzzleHeight = isLandscape ? dimensions.height - 64 : (dimensions.height - 64) * (16 / 9);//dimensions.height - 32;
+    const puzzleWidth = isLandscape ? dimensions.width - 64 : dimensions.width -32;
+    const puzzleHeight = isLandscape ? dimensions.height - 64 : dimensions.width / 1.77 ;//dimensions.height - 32;
 
     // Calculate tile dimensions based on 16:9 puzzle area
     const tileWidth = puzzleWidth / gridSize;
