@@ -4,6 +4,122 @@ import Layout from "../layouts/Layout.astro";
 
 ---
 <Layout title="puzzle 1">
+    <!-- <script>
+        const canvas = document.getElementById("puzzleCanvas");
+const ctx = canvas.getContext("2d");
+const image = new Image();
+image.src = "/puzzle1.webp"; // Cambia esta ruta a tu imagen
+
+const rows = 3; // Número de filas
+const cols = 3; // Número de columnas
+const pieceWidth = canvas.width / cols;
+const pieceHeight = canvas.height / rows;
+
+let pieces = [];
+let emptyPiece = { row: rows - 1, col: cols - 1 };
+
+// Inicializar el puzzle cuando la imagen se carga
+image.onload = () => {
+  initializePuzzle();
+  shufflePuzzle();
+  drawPuzzle();
+};
+
+// Crear las piezas del puzzle
+function initializePuzzle() {
+  pieces = [];
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      if (row === emptyPiece.row && col === emptyPiece.col) continue;
+      pieces.push({ row, col, correctRow: row, correctCol: col });
+    }
+  }
+}
+
+// Mezcla las piezas del puzzle (simplificado)
+function shufflePuzzle() {
+  for (let i = 0; i < 100; i++) {
+    const neighbors = getNeighbors(emptyPiece.row, emptyPiece.col);
+    const randomNeighbor = neighbors[Math.floor(Math.random() * neighbors.length)];
+    movePiece(randomNeighbor.row, randomNeighbor.col);
+  }
+}
+
+// Dibuja las piezas del puzzle
+function drawPuzzle() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  pieces.forEach((piece) => {
+    const { row, col, correctRow, correctCol } = piece;
+    const x = col * pieceWidth;
+    const y = row * pieceHeight;
+    const imgX = correctCol * pieceWidth;
+    const imgY = correctRow * pieceHeight;
+
+    ctx.drawImage(image, imgX, imgY, pieceWidth, pieceHeight, x, y, pieceWidth, pieceHeight);
+    ctx.strokeStyle = "#000";
+    ctx.strokeRect(x, y, pieceWidth, pieceHeight);
+  });
+}
+
+// Obtener vecinos válidos (adyacentes) de una casilla
+function getNeighbors(row, col) {
+  const neighbors = [];
+  if (row > 0) neighbors.push({ row: row - 1, col });
+  if (row < rows - 1) neighbors.push({ row: row + 1, col });
+  if (col > 0) neighbors.push({ row, col: col - 1 });
+  if (col < cols - 1) neighbors.push({ row, col: col + 1 });
+  return neighbors;
+}
+
+// Mover una pieza a la casilla vacía
+function movePiece(row, col) {
+  const piece = pieces.find(p => p.row === row && p.col === col);
+  if (!piece) return;
+
+  // Intercambiar posiciones
+  const tempRow = piece.row;
+  const tempCol = piece.col;
+  piece.row = emptyPiece.row;
+  piece.col = emptyPiece.col;
+  emptyPiece.row = tempRow;
+  emptyPiece.col = tempCol;
+}
+
+// Detectar clics en el canvas
+canvas.addEventListener("click", (e) => {
+  const x = e.offsetX;
+  const y = e.offsetY;
+  const col = Math.floor(x / pieceWidth);
+  const row = Math.floor(y / pieceHeight);
+
+  // Verificar si la pieza clicada está junto a la casilla vacía
+  const isNeighbor = getNeighbors(emptyPiece.row, emptyPiece.col)
+    .some(n => n.row === row && n.col === col);
+
+  if (isNeighbor) {
+    movePiece(row, col);
+    drawPuzzle();
+
+    // Verificar si el puzzle está resuelto
+    if (checkSolved()) {
+      setTimeout(() => alert("¡Puzzle completado!"), 100);
+    }
+  }
+});
+
+// Comprobar si el puzzle está resuelto
+function checkSolved() {
+  return pieces.every(piece => piece.row === piece.correctRow && piece.col === piece.correctCol);
+} -->
+
+
+    </script>
     <!-- <img src="puzzle1.jpg" class="w-screen"/> -->
     <Puzzle gridSize={5} client:only />
+     <!-- <div class="flex w-screen h-screen aspect-video">
+
+         <canvas class="flex w-screen h-screen aspect-video" id="puzzleCanvas" width="1920" height="1280"></canvas>
+        </div> -->
+
 </Layout>
