@@ -1,56 +1,109 @@
-import React, { useState, useEffect } from "react";
+import React from 'react';
 
-const PuzzleComponent = ({ gridSize }: {gridSize: number}) => {
-  const [width, setWidth] = useState(window.innerWidth);
-  const [height, setHeight] = useState(window.innerHeight);
-  const [orientation, setOrientation] = useState("portrait");
+interface PuzzleProps {
+    gridSize: number;
+}
 
-  useEffect(() => {
-    const handleResize = () => {
-      setWidth(window.innerWidth);
-      setHeight(window.innerHeight);
-      setOrientation(window.innerWidth > window.innerHeight ? "landscape" : "portrait");
+const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize }) => {
+    const [dimensions, setDimensions] = React.useState({
+        width: window.innerWidth,
+        height: window.innerHeight,
+    });
+    const [tiles, setTiles] = React.useState<number[]>(Array.from({ length: gridSize * gridSize }, (_, index) => index));
+    const [tileToSwap, setTileToSwap] = React.useState<number | null>(null);
+console.log(window.innerHeight
+
+)
+    // Detect orientation and update dimensions
+    React.useEffect(() => {
+        const handleResize = () => {
+            setDimensions({
+                width: window.innerWidth,
+                height: window.innerHeight,
+            });
+        };
+
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
+    // Determine puzzle size based on 16:9 aspect ratio
+    const isLandscape = dimensions.width > dimensions.height;
+    const puzzleWidth = isLandscape ? dimensions.width - 64 : (dimensions.height - 64) * (16 / 9);
+    const puzzleHeight = isLandscape ? dimensions.height - 64 : (dimensions.height - 64) * (16 / 9);//dimensions.height - 32;
+
+    // Calculate tile dimensions based on 16:9 puzzle area
+    const tileWidth = puzzleWidth / gridSize;
+    const tileHeight = puzzleHeight / gridSize;
+
+    const changeOrder = (tileToSwapIndex: number, targetIndex: number) => {
+        setTiles((prevTiles) => {
+            const array = [...prevTiles];
+            const temp = array[tileToSwapIndex];
+            array[tileToSwapIndex] = array[targetIndex];
+            array[targetIndex] = temp;
+            return array;
+        });
     };
 
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+    const moveTile = (index: number) => {
+        if (tileToSwap === index) {
+            setTileToSwap(null);
+            return;
+        }
+        if (tileToSwap === null) {
+            setTileToSwap(index);
+            return;
+        } else {
+            const tileToSwapRow = Math.floor(tileToSwap / gridSize);
+            const indexRow = Math.floor(index / gridSize);
 
-  // Calcular el tamaño del puzzle basándonos en la orientación y mantener la relación 16:9
-  const puzzleWidth = orientation === "portrait" ? width - 64 : (height - 64) * (16 / 9);
-  const puzzleHeight = puzzleWidth * (9 / 16);
-  const pieceWidth = puzzleWidth / gridSize;
-  const pieceHeight = puzzleHeight / gridSize;
+            if (tileToSwapRow === indexRow) {
+                if (tileToSwap - 1 === index || tileToSwap + 1 === index) {
+                    changeOrder(tileToSwap, index);
+                }
+            } else if (Math.abs(tileToSwap - index) === gridSize) {
+                changeOrder(tileToSwap, index);
+            }
 
-  return (
-    <div
-      style={{
-        width: `${puzzleWidth}px`,
-        height: `${puzzleHeight}px`,
-        display: "grid",
-        gridTemplateColumns: `repeat(${gridSize}, ${pieceWidth}px)`,
-        gridTemplateRows: `repeat(${gridSize}, ${pieceHeight}px)`,
-        backgroundColor: "#00C4CC", // Color de fondo del contenedor del puzzle
-        position: "relative",
-        margin: "0 auto",
-      }}
-    >
-      {/* Aquí renderizas tus piezas de puzzle usando pieceWidth y pieceHeight */}
-      {[...Array(gridSize * gridSize)].map((_, index) => (
+            setTileToSwap(null);
+        }
+    };
+
+    return (
         <div
-          key={index}
-          style={{
-            width: `${pieceWidth}px`,
-            height: `${pieceHeight}px`,
-            border: "1px solid #FFFFFF",
-            backgroundImage: "url(/puzzle1.webp)",
-            backgroundSize: `${puzzleWidth}px ${puzzleHeight}px`,
-            backgroundPosition: `${-(index % gridSize) * pieceWidth}px ${-Math.floor(index / gridSize) * pieceHeight}px`,
-          }}
-        />
-      ))}
-    </div>
-  );
+            className="grid gap-1"
+            style={{
+                gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
+                width: `${puzzleWidth}px`,
+                height: `${puzzleHeight}px`,
+            }}
+        >
+            {tiles.map((tile, index) => (
+                <div key={index} className="relative" style={{ width: `${tileWidth}px`, height: `${tileHeight}px` }}>
+                    {tileToSwap === index && (
+                        <div
+                            className={`border-2 absolute inset-0 z-10 ${tileToSwap === index ? 'border-yellow-600' : 'border-transparent'}`}
+                            onClick={() => moveTile(index)}
+                        ></div>
+                    )}
+                    <div
+                        className={`flex items-center justify-center bg-green-700 text-white font-bold text-xl cursor-pointer z-0`}
+                        style={{
+                            width: `${tileWidth}px`,
+                            height: `${tileHeight}px`,
+                            backgroundImage: "url('/puzzle1.webp')",
+                            backgroundSize: `${puzzleWidth}px ${puzzleHeight}px`,
+                            backgroundPosition: `${-(tile % gridSize) * tileWidth}px ${-Math.floor(tile / gridSize) * tileHeight}px`
+                        }}
+                        onClick={() => moveTile(index)}
+                    >
+                        {/* {tile} */}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
 };
 
-export default PuzzleComponent;
+export default Puzzle;
