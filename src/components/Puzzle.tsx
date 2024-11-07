@@ -4,6 +4,20 @@ interface PuzzleProps {
     gridSize: number;
 }
 
+function shuffle(arra1: number[]) {
+    var ctr = arra1.length,
+      temp,
+      index;
+    while (ctr > 0) {
+      index = Math.floor(Math.random() * ctr);
+      ctr--;
+      temp = arra1[ctr];
+      arra1[ctr] = arra1[index];
+      arra1[index] = temp;
+    }
+    return arra1;
+  }
+
 const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize }) => {
     const [dimensions, setDimensions] = React.useState({
         width: window.innerWidth,
@@ -22,6 +36,9 @@ console.log(window.innerHeight
                 height: window.innerHeight,
             });
         };
+
+        const mountArray = shuffle([...tiles]);
+        setTiles(mountArray);
 
         window.addEventListener("resize", handleResize);
         return () => window.removeEventListener("resize", handleResize);
@@ -69,7 +86,7 @@ console.log(window.innerHeight
             setTileToSwap(null);
         }
     };
-
+    
     return (
         <div
             className="grid gap-1"
