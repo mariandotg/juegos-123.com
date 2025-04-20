@@ -25,13 +25,52 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize }) => {
     });
     const [tiles, setTiles] = React.useState<number[]>(Array.from({ length: gridSize * gridSize }, (_, index) => index));
     const [tileToSwap, setTileToSwap] = React.useState<number | null>(null);
+    const [isMuted, setIsMuted] = React.useState(false);
+    const [isAnimating, setIsAnimating] = React.useState(false);
+    const [animatingTiles, setAnimatingTiles] = React.useState<[number, number] | null>(null);
     const moveSound = React.useRef<HTMLAudioElement | null>(null);
+    const backgroundMusic = React.useRef<HTMLAudioElement | null>(null);
 
     // Initialize audio
     React.useEffect(() => {
         moveSound.current = new Audio('/move-sound.mp3');
         moveSound.current.volume = 0.5; // Set volume to 50%
+
+        backgroundMusic.current = new Audio('/background-music.mp3');
+        backgroundMusic.current.volume = 0.3; // Set volume to 30%
+        backgroundMusic.current.loop = true; // Enable looping
+
+        // Start playing background music when component mounts
+        const playBackgroundMusic = async () => {
+            try {
+                await backgroundMusic.current?.play();
+            } catch (error) {
+                console.log("Background music play failed:", error);
+            }
+        };
+        playBackgroundMusic();
+
+        return () => {
+            // Cleanup: stop music when component unmounts
+            if (backgroundMusic.current) {
+                backgroundMusic.current.pause();
+                backgroundMusic.current.currentTime = 0;
+            }
+        };
     }, []);
+
+    // Handle mute state changes
+    React.useEffect(() => {
+        if (backgroundMusic.current) {
+            if (isMuted) {
+                backgroundMusic.current.pause();
+            } else {
+                backgroundMusic.current.play().catch(error => {
+                    console.log("Background music play failed:", error);
+                });
+            }
+        }
+    }, [isMuted]);
 
     // Detect orientation and update dimensions
     React.useEffect(() => {
@@ -76,18 +115,24 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize }) => {
                 width = Math.min(dimensions.width * 0.9, dimensions.width - 32);
                 height = width / aspectRatio;
             } else {
-                // In landscape mode, use 80% of the height
-                height = dimensions.height * 0.8;
+                // In landscape mode, use 90% of the height (increased from 80%)
+                height = dimensions.height * 0.9;
                 width = height * aspectRatio;
+
+                // If width is too large, scale down
+                if (width > dimensions.width * 0.7) {
+                    width = dimensions.width * 0.7;
+                    height = width / aspectRatio;
+                }
             }
         } else {
-            // For desktop, use 70% of the viewport height
-            height = dimensions.height * 0.7;
+            // For desktop, use 80% of the viewport height (increased from 70%)
+            height = dimensions.height * 0.8;
             width = height * aspectRatio;
 
             // If width is too large, scale down
-            if (width > dimensions.width * 0.9) {
-                width = dimensions.width * 0.9;
+            if (width > dimensions.width * 0.8) {
+                width = dimensions.width * 0.8;
                 height = width / aspectRatio;
             }
         }
@@ -115,6 +160,7 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize }) => {
     };
 
     const moveTile = (index: number) => {
+        if (isAnimating) return; // Prevent moves during animation
         if (tileToSwap === index) {
             setTileToSwap(null);
             return;
@@ -128,24 +174,42 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize }) => {
 
             if (tileToSwapRow === indexRow) {
                 if (tileToSwap - 1 === index || tileToSwap + 1 === index) {
-                    changeOrder(tileToSwap, index);
-                    // Play sound effect
-                    if (moveSound.current) {
-                        moveSound.current.currentTime = 0; // Reset sound to start
+                    // Play sound effect if not muted (2ms before animation)
+                    if (moveSound.current && !isMuted) {
+                        moveSound.current.currentTime = 0;
                         moveSound.current.play().catch(error => {
                             console.log("Audio play failed:", error);
                         });
                     }
+                    setIsAnimating(true);
+                    setAnimatingTiles([tileToSwap, index]);
+                    // Wait for animation to complete before swapping tiles
+                    // setTimeout(() => {
+                        changeOrder(tileToSwap, index);
+                        setTimeout(() => {
+                            setIsAnimating(false);
+                            setAnimatingTiles(null);
+                        }, 50); // Small delay after swap to ensure smooth transition
+                    // }, 100); // Animation duration
                 }
             } else if (Math.abs(tileToSwap - index) === gridSize) {
-                changeOrder(tileToSwap, index);
-                // Play sound effect
-                if (moveSound.current) {
-                    moveSound.current.currentTime = 0; // Reset sound to start
+                // Play sound effect if not muted (2ms before animation)
+                if (moveSound.current && !isMuted) {
+                    moveSound.current.currentTime = 0;
                     moveSound.current.play().catch(error => {
                         console.log("Audio play failed:", error);
                     });
                 }
+                setIsAnimating(true);
+                setAnimatingTiles([tileToSwap, index]);
+                // Wait for animation to complete before swapping tiles
+                // setTimeout(() => {
+                    changeOrder(tileToSwap, index);
+                    setTimeout(() => {
+                        setIsAnimating(false);
+                        setAnimatingTiles(null);
+                    }, 50); // Small delay after swap to ensure smooth transition
+                // }, 200); // Animation duration
             }
 
             setTileToSwap(null);
@@ -157,6 +221,36 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize }) => {
         setTiles(newTiles);
         setTileToSwap(null);
     };
+
+    const toggleMute = () => {
+        setIsMuted(!isMuted);
+    };
+
+    const getTileStyle = (index: number) => {
+        if (!animatingTiles || !animatingTiles.includes(index)) {
+            return {};
+        }
+
+        const [fromIndex, toIndex] = animatingTiles;
+        const isFromTile = index === fromIndex;
+        const isToTile = index === toIndex;
+
+        if (isFromTile || isToTile) {
+            const fromRow = Math.floor(fromIndex / gridSize);
+            const fromCol = fromIndex % gridSize;
+            const toRow = Math.floor(toIndex / gridSize);
+            const toCol = toIndex % gridSize;
+
+            const translateX = (toCol - fromCol) * containerStyle.tileWidth;
+            const translateY = (toRow - fromRow) * containerStyle.tileHeight;
+
+            return {
+                transform: `translate(${isFromTile ? translateX : -translateX}px, ${isFromTile ? translateY : -translateY}px)`,
+            };
+        }
+
+        return {};
+    };
     
     return (
         <div className="flex items-center justify-center w-full h-full relative overflow-hidden">
@@ -167,12 +261,20 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize }) => {
             )}
             <div className={`flex ${isPortrait ? 'flex-col' : 'flex-row'} items-center gap-4`}>
                 {isPortrait && (
-                    <button
-                        onClick={reshufflePuzzle}
-                        className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-colors duration-200 active:bg-blue-700 touch-manipulation"
-                    >
-                        R
-                    </button>
+                    <div className="flex gap-4">
+                        <button
+                            onClick={reshufflePuzzle}
+                            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-colors duration-200 active:bg-blue-700 touch-manipulation"
+                        >
+                            R
+                        </button>
+                        <button
+                            onClick={toggleMute}
+                            className={`${isMuted ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'} text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-colors duration-200 active:bg-blue-700 touch-manipulation`}
+                        >
+                            {isMuted ? '🔇' : '🔊'}
+                        </button>
+                    </div>
                 )}
                 <div
                     className="grid gap-1 mx-auto"
@@ -186,10 +288,11 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize }) => {
                     {tiles.map((tile, index) => (
                         <div 
                             key={index} 
-                            className="relative touch-manipulation" 
+                            className="relative touch-manipulation transition-transform duration-200 ease-in-out" 
                             style={{ 
                                 width: `${containerStyle.tileWidth}px`, 
-                                height: `${containerStyle.tileHeight}px` 
+                                height: `${containerStyle.tileHeight}px`,
+                                ...getTileStyle(index),
                             }}
                         >
                             {tileToSwap === index && (
@@ -200,13 +303,13 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize }) => {
                                 ></div>
                             )}
                             <div
-                                className={`flex items-center justify-center bg-green-700 text-white font-bold text-xl cursor-pointer z-0 touch-manipulation`}
+                                className={`flex items-center justify-center bg-green-700 text-white font-bold text-xl cursor-pointer z-0 touch-manipulation transition-transform duration-200 ease-in-out`}
                                 style={{
                                     width: '100%',
                                     height: '100%',
                                     backgroundImage: "url('/puzzle1.webp')",
                                     backgroundSize: `${containerStyle.width}px ${containerStyle.height}px`,
-                                    backgroundPosition: `${-(tile % gridSize) * containerStyle.tileWidth}px ${-Math.floor(tile / gridSize) * containerStyle.tileHeight}px`
+                                    backgroundPosition: `${-(tile % gridSize) * containerStyle.tileWidth}px ${-Math.floor(tile / gridSize) * containerStyle.tileHeight}px`,
                                 }}
                                 onClick={() => moveTile(index)}
                                 onTouchStart={() => moveTile(index)}
@@ -216,12 +319,20 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize }) => {
                     ))}
                 </div>
                 {!isPortrait && (
-                    <button
-                        onClick={reshufflePuzzle}
-                        className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-colors duration-200 active:bg-blue-700 touch-manipulation ml-8"
-                    >
-                        R
-                    </button>
+                    <div className="flex flex-col gap-4 ml-8">
+                        <button
+                            onClick={toggleMute}
+                            className={`${isMuted ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'} text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-colors duration-200 active:bg-blue-700 touch-manipulation`}
+                        >
+                            {isMuted ? '🔇' : '🔊'}
+                        </button>
+                        <button
+                            onClick={reshufflePuzzle}
+                            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-colors duration-200 active:bg-blue-700 touch-manipulation"
+                        >
+                            R
+                        </button>
+                    </div>
                 )}
             </div>
         </div>
