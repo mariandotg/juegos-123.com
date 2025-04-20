@@ -25,6 +25,13 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize }) => {
     });
     const [tiles, setTiles] = React.useState<number[]>(Array.from({ length: gridSize * gridSize }, (_, index) => index));
     const [tileToSwap, setTileToSwap] = React.useState<number | null>(null);
+    const moveSound = React.useRef<HTMLAudioElement | null>(null);
+
+    // Initialize audio
+    React.useEffect(() => {
+        moveSound.current = new Audio('/move-sound.mp3');
+        moveSound.current.volume = 0.5; // Set volume to 50%
+    }, []);
 
     // Detect orientation and update dimensions
     React.useEffect(() => {
@@ -42,27 +49,60 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize }) => {
         return () => window.removeEventListener("resize", handleResize);
     }, []);
 
-    // Calculate puzzle size based on screen dimensions
-    const isLandscape = dimensions.width > dimensions.height;
-    const isMobile = dimensions.width < 768; // Standard mobile breakpoint
-    
-    // Calculate puzzle dimensions with proper padding
-    const maxWidth = isMobile ? dimensions.width - 32 : dimensions.width - 64;
-    const maxHeight = isMobile ? dimensions.height - 32 : dimensions.height - 64;
-    
-    // Maintain aspect ratio while fitting within screen
-    const aspectRatio = 16 / 9;
-    let puzzleWidth = maxWidth;
-    let puzzleHeight = maxWidth / aspectRatio;
-    
-    if (puzzleHeight > maxHeight) {
-        puzzleHeight = maxHeight;
-        puzzleWidth = maxHeight * aspectRatio;
-    }
+    // Check if device is mobile
+    const isMobile = React.useMemo(() => {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }, []);
 
-    // Calculate tile dimensions
-    const tileWidth = puzzleWidth / gridSize;
-    const tileHeight = puzzleHeight / gridSize;
+    // Check if device is in portrait mode
+    const isPortrait = React.useMemo(() => {
+        return dimensions.height > dimensions.width;
+    }, [dimensions]);
+
+    // Calculate responsive dimensions
+    const containerStyle = React.useMemo(() => {
+        const isLandscape = dimensions.width > dimensions.height;
+        const isMobileView = dimensions.width < 768;
+
+        // Aspect ratio for the puzzle (16:9)
+        const aspectRatio = 16 / 9;
+
+        // Calculate base size based on viewport
+        let width, height;
+
+        if (isMobileView) {
+            if (isPortrait) {
+                // In portrait mode, use 90% of the width, but ensure it fits
+                width = Math.min(dimensions.width * 0.9, dimensions.width - 32);
+                height = width / aspectRatio;
+            } else {
+                // In landscape mode, use 80% of the height
+                height = dimensions.height * 0.8;
+                width = height * aspectRatio;
+            }
+        } else {
+            // For desktop, use 70% of the viewport height
+            height = dimensions.height * 0.7;
+            width = height * aspectRatio;
+
+            // If width is too large, scale down
+            if (width > dimensions.width * 0.9) {
+                width = dimensions.width * 0.9;
+                height = width / aspectRatio;
+            }
+        }
+
+        // Calculate tile dimensions
+        const tileWidth = width / gridSize;
+        const tileHeight = height / gridSize;
+
+        return {
+            width,
+            height,
+            tileWidth,
+            tileHeight,
+        };
+    }, [dimensions, gridSize, isPortrait]);
 
     const changeOrder = (tileToSwapIndex: number, targetIndex: number) => {
         setTiles((prevTiles) => {
@@ -89,53 +129,100 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize }) => {
             if (tileToSwapRow === indexRow) {
                 if (tileToSwap - 1 === index || tileToSwap + 1 === index) {
                     changeOrder(tileToSwap, index);
+                    // Play sound effect
+                    if (moveSound.current) {
+                        moveSound.current.currentTime = 0; // Reset sound to start
+                        moveSound.current.play().catch(error => {
+                            console.log("Audio play failed:", error);
+                        });
+                    }
                 }
             } else if (Math.abs(tileToSwap - index) === gridSize) {
                 changeOrder(tileToSwap, index);
+                // Play sound effect
+                if (moveSound.current) {
+                    moveSound.current.currentTime = 0; // Reset sound to start
+                    moveSound.current.play().catch(error => {
+                        console.log("Audio play failed:", error);
+                    });
+                }
             }
 
             setTileToSwap(null);
         }
     };
+
+    const reshufflePuzzle = () => {
+        const newTiles = shuffle([...tiles]);
+        setTiles(newTiles);
+        setTileToSwap(null);
+    };
     
     return (
-        <div className="flex items-center justify-center w-full h-full">
-            <div
-                className="grid gap-1"
-                style={{
-                    gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
-                    width: `${puzzleWidth}px`,
-                    height: `${puzzleHeight}px`,
-                }}
-            >
-                {tiles.map((tile, index) => (
-                    <div 
-                        key={index} 
-                        className="relative touch-manipulation" 
-                        style={{ width: `${tileWidth}px`, height: `${tileHeight}px` }}
+        <div className="flex items-center justify-center w-full h-full relative overflow-hidden">
+            {isMobile && isPortrait && (
+                <div className="absolute top-0 left-0 right-0 bg-yellow-500 text-black text-center p-4 z-50">
+                    <p className="text-lg font-bold">Please rotate your device to landscape mode for a better gaming experience!</p>
+                </div>
+            )}
+            <div className={`flex ${isPortrait ? 'flex-col' : 'flex-row'} items-center gap-4`}>
+                {isPortrait && (
+                    <button
+                        onClick={reshufflePuzzle}
+                        className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-colors duration-200 active:bg-blue-700 touch-manipulation"
                     >
-                        {tileToSwap === index && (
+                        R
+                    </button>
+                )}
+                <div
+                    className="grid gap-1 mx-auto"
+                    style={{
+                        gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
+                        width: `${containerStyle.width}px`,
+                        height: `${containerStyle.height}px`,
+                        maxWidth: '100%',
+                    }}
+                >
+                    {tiles.map((tile, index) => (
+                        <div 
+                            key={index} 
+                            className="relative touch-manipulation" 
+                            style={{ 
+                                width: `${containerStyle.tileWidth}px`, 
+                                height: `${containerStyle.tileHeight}px` 
+                            }}
+                        >
+                            {tileToSwap === index && (
+                                <div
+                                    className={`border-2 absolute inset-0 z-10 ${tileToSwap === index ? 'border-yellow-600' : 'border-transparent'}`}
+                                    onClick={() => moveTile(index)}
+                                    onTouchStart={() => moveTile(index)}
+                                ></div>
+                            )}
                             <div
-                                className={`border-2 absolute inset-0 z-10 ${tileToSwap === index ? 'border-yellow-600' : 'border-transparent'}`}
+                                className={`flex items-center justify-center bg-green-700 text-white font-bold text-xl cursor-pointer z-0 touch-manipulation`}
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    backgroundImage: "url('/puzzle1.webp')",
+                                    backgroundSize: `${containerStyle.width}px ${containerStyle.height}px`,
+                                    backgroundPosition: `${-(tile % gridSize) * containerStyle.tileWidth}px ${-Math.floor(tile / gridSize) * containerStyle.tileHeight}px`
+                                }}
                                 onClick={() => moveTile(index)}
                                 onTouchStart={() => moveTile(index)}
-                            ></div>
-                        )}
-                        <div
-                            className={`flex items-center justify-center bg-green-700 text-white font-bold text-xl cursor-pointer z-0 touch-manipulation`}
-                            style={{
-                                width: `${tileWidth}px`,
-                                height: `${tileHeight}px`,
-                                backgroundImage: "url('/puzzle1.webp')",
-                                backgroundSize: `${puzzleWidth}px ${puzzleHeight}px`,
-                                backgroundPosition: `${-(tile % gridSize) * tileWidth}px ${-Math.floor(tile / gridSize) * tileHeight}px`
-                            }}
-                            onClick={() => moveTile(index)}
-                            onTouchStart={() => moveTile(index)}
-                        >
+                            >
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    ))}
+                </div>
+                {!isPortrait && (
+                    <button
+                        onClick={reshufflePuzzle}
+                        className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-colors duration-200 active:bg-blue-700 touch-manipulation ml-8"
+                    >
+                        R
+                    </button>
+                )}
             </div>
         </div>
     );
