@@ -1,7 +1,11 @@
 export interface Theme {
-    id: string;
+    id: number;
+    slug: string;
     name: string;
-    image: string;
+    imageBanner: string;
+    images: {
+        [key: number]: string; // level number to image URL
+    };
     description: string;
 }
 
@@ -10,32 +14,55 @@ export interface Level {
     name: string;
     gridSize: number;
     difficulty: 'easy' | 'medium' | 'hard';
-    imageSrc: string;
 }
 
 export const themes: Theme[] = [
     {
-        id: 'animals',
-        name: 'Animales',
-        image: '/themes/animals.webp',
-        description: '¡Descubre increíbles animales!'
+        id: 1,
+        slug: 'selva',
+        name: 'Animales de la Selva',
+        imageBanner: "",
+        images: {
+            1: '/themes/selva/level1.webp',
+            2: '/themes/selva/level2.webp',
+            3: '/themes/selva/level3.webp'
+        },
+        description: '¡Descubre increíbles animales salvajes!'
     },
     {
-        id: 'dinosaurs',
+        id: 2,
+        slug: 'dinosaurs',
         name: 'Dinosaurios',
-        image: '/themes/dinosaurs.webp',
+        imageBanner: "",
+        images: {
+            1: '/themes/dinosaurs/level1.webp',
+            2: '/themes/dinosaurs/level2.webp',
+            3: '/themes/dinosaurs/level3.webp'
+        },
         description: '¡Viaja al pasado con los dinosaurios!'
     },
     {
-        id: 'ocean',
+        id: 3,
+        slug: 'acuaticos2',
         name: 'Océano',
-        image: '/themes/ocean.webp',
+        imageBanner: "",
+        images: {
+            1: '/themes/acuaticos2/level1.jpg',
+            2: '/themes/acuaticos2/level2.webp',
+            3: '/themes/acuaticos2/level3.webp'
+        },
         description: '¡Explora las profundidades del océano!'
     },
     {
-        id: 'space',
+        id: 4,
+        slug: 'space',
         name: 'Espacio',
-        image: '/themes/space.webp',
+        imageBanner: "",
+        images: {
+            1: '/themes/space/level1.webp',
+            2: '/themes/space/level2.webp',
+            3: '/themes/space/level3.webp'
+        },
         description: '¡Viaja por el espacio!'
     }
 ];
@@ -45,21 +72,18 @@ export const levels: Level[] = [
         id: 1,
         name: 'Principiante',
         gridSize: 3,
-        difficulty: 'easy',
-        imageSrc: "/puzzle1.webp"
+        difficulty: 'easy'
     },
     {
         id: 2,
         name: 'Intermedio',
         gridSize: 4,
-        difficulty: 'medium',
-        imageSrc: "/puzzle1.webp"
+        difficulty: 'medium'
     },
     {
         id: 3,
         name: 'Avanzado',
         gridSize: 5,
-        difficulty: 'hard',
-        imageSrc: "/puzzle1.webp"
+        difficulty: 'hard'
     }
-]; 
+];

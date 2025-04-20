@@ -5,6 +5,7 @@ interface PuzzleProps {
     gridSize: number;
     imageSrc: string;
     level: number;
+    onComplete: () => void
 }
 
 function shuffle(arra1: number[]) {
@@ -21,12 +22,12 @@ function shuffle(arra1: number[]) {
     return arra1;
 }
 
-const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize, imageSrc, level }) => {
+const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize, imageSrc, level, onComplete }) => {
     const [dimensions, setDimensions] = React.useState({
         width: window.innerWidth,
         height: window.innerHeight,
     });
-    const [tiles, setTiles] = React.useState<number[]>(Array.from({ length: gridSize * gridSize }, (_, index) => index));
+    const [tiles, setTiles] = React.useState<number[]>([]);
     const [tileToSwap, setTileToSwap] = React.useState<number | null>(null);
     const [isMuted, setIsMuted] = React.useState(false);
     const [isAnimating, setIsAnimating] = React.useState(false);
@@ -35,11 +36,20 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize, imageSrc, leve
     const moveSound = React.useRef<HTMLAudioElement | null>(null);
     const backgroundMusic = React.useRef<HTMLAudioElement | null>(null);
 
+    // Initialize tiles when gridSize or level changes
+    React.useEffect(() => {
+        const initialTiles = Array.from({ length: gridSize * gridSize }, (_, index) => index);
+        setTiles(shuffle(initialTiles));
+        setTileToSwap(null);
+        setIsComplete(false);
+    }, [gridSize, level]);
+
     // Check if puzzle is complete
     const checkCompletion = React.useCallback(() => {
         const isComplete = tiles.every((tile, index) => tile === index);
-        if (isComplete) {
+        if (isComplete && tiles.length > 0) {
             setIsComplete(true);
+            onComplete()
             // Stop confetti after 5 seconds
             setTimeout(() => {
                 setIsComplete(false);
@@ -55,13 +65,12 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize, imageSrc, leve
     // Initialize audio
     React.useEffect(() => {
         moveSound.current = new Audio('/move-sound.mp3');
-        moveSound.current.volume = 0.5; // Set volume to 50%
+        moveSound.current.volume = 0.5;
 
         backgroundMusic.current = new Audio('/background-music.mp3');
-        backgroundMusic.current.volume = 0.3; // Set volume to 30%
-        backgroundMusic.current.loop = true; // Enable looping
+        backgroundMusic.current.volume = 0.3;
+        backgroundMusic.current.loop = true;
 
-        // Start playing background music when component mounts
         const playBackgroundMusic = async () => {
             try {
                 await backgroundMusic.current?.play();
@@ -72,7 +81,6 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize, imageSrc, leve
         playBackgroundMusic();
 
         return () => {
-            // Cleanup: stop music when component unmounts
             if (backgroundMusic.current) {
                 backgroundMusic.current.pause();
                 backgroundMusic.current.currentTime = 0;
@@ -92,13 +100,6 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize, imageSrc, leve
             }
         }
     }, [isMuted]);
-
-    // Reset tiles when grid size or level changes
-    React.useEffect(() => {
-        const newTiles = Array.from({ length: gridSize * gridSize }, (_, index) => index);
-        setTiles(shuffle(newTiles));
-        setTileToSwap(null);
-    }, [gridSize, level]);
 
     // Detect orientation and update dimensions
     React.useEffect(() => {
@@ -128,41 +129,32 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize, imageSrc, leve
         const isLandscape = dimensions.width > dimensions.height;
         const isMobileView = dimensions.width < 768;
 
-        // Aspect ratio for the puzzle (16:9)
         const aspectRatio = 16 / 9;
-
-        // Calculate base size based on viewport
         let width, height;
 
         if (isMobileView) {
             if (isPortrait) {
-                // In portrait mode, use 90% of the width, but ensure it fits
                 width = Math.min(dimensions.width * 0.9, dimensions.width - 32);
                 height = width / aspectRatio;
             } else {
-                // In landscape mode, use 90% of the height (increased from 80%)
                 height = dimensions.height * 0.9;
                 width = height * aspectRatio;
 
-                // If width is too large, scale down
                 if (width > dimensions.width * 0.7) {
                     width = dimensions.width * 0.7;
                     height = width / aspectRatio;
                 }
             }
         } else {
-            // For desktop, use 80% of the viewport height (increased from 70%)
             height = dimensions.height * 0.8;
             width = height * aspectRatio;
 
-            // If width is too large, scale down
             if (width > dimensions.width * 0.8) {
                 width = dimensions.width * 0.8;
                 height = width / aspectRatio;
             }
         }
 
-        // Calculate tile dimensions
         const tileWidth = width / gridSize;
         const tileHeight = height / gridSize;
 
@@ -185,7 +177,7 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize, imageSrc, leve
     };
 
     const moveTile = (index: number) => {
-        if (isAnimating) return; // Prevent moves during animation
+        if (isAnimating) return;
         if (tileToSwap === index) {
             setTileToSwap(null);
             return;
@@ -199,7 +191,6 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize, imageSrc, leve
 
             if (tileToSwapRow === indexRow) {
                 if (tileToSwap - 1 === index || tileToSwap + 1 === index) {
-                    // Play sound effect if not muted (2ms before animation)
                     if (moveSound.current && !isMuted) {
                         moveSound.current.currentTime = 0;
                         moveSound.current.play().catch(error => {
@@ -208,15 +199,13 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize, imageSrc, leve
                     }
                     setIsAnimating(true);
                     setAnimatingTiles([tileToSwap, index]);
-                    // Wait for animation to complete before swapping tiles
                     changeOrder(tileToSwap, index);
                     setTimeout(() => {
                         setIsAnimating(false);
                         setAnimatingTiles(null);
-                    }, 50); // Small delay after swap to ensure smooth transition
+                    }, 50);
                 }
             } else if (Math.abs(tileToSwap - index) === gridSize) {
-                // Play sound effect if not muted (2ms before animation)
                 if (moveSound.current && !isMuted) {
                     moveSound.current.currentTime = 0;
                     moveSound.current.play().catch(error => {
@@ -225,12 +214,11 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize, imageSrc, leve
                 }
                 setIsAnimating(true);
                 setAnimatingTiles([tileToSwap, index]);
-                // Wait for animation to complete before swapping tiles
                 changeOrder(tileToSwap, index);
                 setTimeout(() => {
                     setIsAnimating(false);
                     setAnimatingTiles(null);
-                }, 50); // Small delay after swap to ensure smooth transition
+                }, 50);
             }
 
             setTileToSwap(null);
