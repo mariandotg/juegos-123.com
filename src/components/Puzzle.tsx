@@ -2,6 +2,8 @@ import React from 'react';
 
 interface PuzzleProps {
     gridSize: number;
+    imageSrc: string;
+    level: number;
 }
 
 function shuffle(arra1: number[]) {
@@ -18,7 +20,7 @@ function shuffle(arra1: number[]) {
     return arra1;
 }
 
-const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize }) => {
+const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize, imageSrc, level }) => {
     const [dimensions, setDimensions] = React.useState({
         width: window.innerWidth,
         height: window.innerHeight,
@@ -72,6 +74,13 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize }) => {
         }
     }, [isMuted]);
 
+    // Reset tiles when grid size or level changes
+    React.useEffect(() => {
+        const newTiles = Array.from({ length: gridSize * gridSize }, (_, index) => index);
+        setTiles(shuffle(newTiles));
+        setTileToSwap(null);
+    }, [gridSize, level]);
+
     // Detect orientation and update dimensions
     React.useEffect(() => {
         const handleResize = () => {
@@ -80,9 +89,6 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize }) => {
                 height: window.innerHeight,
             });
         };
-
-        const mountArray = shuffle([...tiles]);
-        setTiles(mountArray);
 
         window.addEventListener("resize", handleResize);
         return () => window.removeEventListener("resize", handleResize);
@@ -184,13 +190,11 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize }) => {
                     setIsAnimating(true);
                     setAnimatingTiles([tileToSwap, index]);
                     // Wait for animation to complete before swapping tiles
-                    // setTimeout(() => {
-                        changeOrder(tileToSwap, index);
-                        setTimeout(() => {
-                            setIsAnimating(false);
-                            setAnimatingTiles(null);
-                        }, 50); // Small delay after swap to ensure smooth transition
-                    // }, 100); // Animation duration
+                    changeOrder(tileToSwap, index);
+                    setTimeout(() => {
+                        setIsAnimating(false);
+                        setAnimatingTiles(null);
+                    }, 50); // Small delay after swap to ensure smooth transition
                 }
             } else if (Math.abs(tileToSwap - index) === gridSize) {
                 // Play sound effect if not muted (2ms before animation)
@@ -203,13 +207,11 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize }) => {
                 setIsAnimating(true);
                 setAnimatingTiles([tileToSwap, index]);
                 // Wait for animation to complete before swapping tiles
-                // setTimeout(() => {
-                    changeOrder(tileToSwap, index);
-                    setTimeout(() => {
-                        setIsAnimating(false);
-                        setAnimatingTiles(null);
-                    }, 50); // Small delay after swap to ensure smooth transition
-                // }, 200); // Animation duration
+                changeOrder(tileToSwap, index);
+                setTimeout(() => {
+                    setIsAnimating(false);
+                    setAnimatingTiles(null);
+                }, 50); // Small delay after swap to ensure smooth transition
             }
 
             setTileToSwap(null);
@@ -307,7 +309,7 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize }) => {
                                 style={{
                                     width: '100%',
                                     height: '100%',
-                                    backgroundImage: "url('/puzzle1.webp')",
+                                    backgroundImage: `url('${imageSrc}')`,
                                     backgroundSize: `${containerStyle.width}px ${containerStyle.height}px`,
                                     backgroundPosition: `${-(tile % gridSize) * containerStyle.tileWidth}px ${-Math.floor(tile / gridSize) * containerStyle.tileHeight}px`,
                                 }}
