@@ -1,4 +1,5 @@
 import React from 'react';
+import Confetti from 'react-confetti';
 
 interface PuzzleProps {
     gridSize: number;
@@ -30,8 +31,26 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize, imageSrc, leve
     const [isMuted, setIsMuted] = React.useState(false);
     const [isAnimating, setIsAnimating] = React.useState(false);
     const [animatingTiles, setAnimatingTiles] = React.useState<[number, number] | null>(null);
+    const [isComplete, setIsComplete] = React.useState(false);
     const moveSound = React.useRef<HTMLAudioElement | null>(null);
     const backgroundMusic = React.useRef<HTMLAudioElement | null>(null);
+
+    // Check if puzzle is complete
+    const checkCompletion = React.useCallback(() => {
+        const isComplete = tiles.every((tile, index) => tile === index);
+        if (isComplete) {
+            setIsComplete(true);
+            // Stop confetti after 5 seconds
+            setTimeout(() => {
+                setIsComplete(false);
+            }, 5000);
+        }
+    }, [tiles]);
+
+    // Check completion after each move
+    React.useEffect(() => {
+        checkCompletion();
+    }, [tiles, checkCompletion]);
 
     // Initialize audio
     React.useEffect(() => {
@@ -256,6 +275,15 @@ const Puzzle: React.FunctionComponent<PuzzleProps> = ({ gridSize, imageSrc, leve
     
     return (
         <div className="flex items-center justify-center w-full h-full relative overflow-hidden">
+            {isComplete && (
+                <Confetti
+                    width={dimensions.width}
+                    height={dimensions.height}
+                    recycle={false}
+                    numberOfPieces={700}
+                    gravity={0.9}
+                />
+            )}
             {isMobile && isPortrait && (
                 <div className="absolute top-0 left-0 right-0 bg-yellow-500 text-black text-center p-4 z-50">
                     <p className="text-lg font-bold">Please rotate your device to landscape mode for a better gaming experience!</p>
